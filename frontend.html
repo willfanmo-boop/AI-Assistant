@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>AI-Assistant – Frontend (stub ready)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+    body {
+      margin: 0;
+      background: #0b0b0c;
+      color: #eaeaea;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .wrapper {
+      background: #141418;
+      border: 1px solid #2a2a2e;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 800px;
+      padding: 24px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 22px;
+      text-align: center;
+    }
+    .pill {
+      display: inline-block;
+      padding: 3px 10px;
+      border: 1px solid #2a2a2e;
+      border-radius: 999px;
+      font-size: 12px;
+      color: #b9b9c5;
+      margin-left: 8px;
+    }
+    .input-area {
+      background: #1b1b1d;
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .row { display: flex; flex-wrap: wrap; gap: 12px; }
+    .col { flex: 1 1 320px; }
+
+    label {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 6px;
+      color: #b9b9c5;
+    }
+    textarea, input[type="text"] {
+      width: 100%;
+      background: #0f0f13;
+      color: #eee;
+      border: 1px solid #2a2a2e;
+      border-radius: 10px;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+    textarea { min-height: 120px; resize: vertical; }
+
+    input[type="file"] {
+      background: #0f0f13;
+      color: #b9b9c5;
+      border-radius: 8px;
+      padding: 6px;
+      border: 1px solid #2a2a2e;
+      width: 100%;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    .send-btn {
+      background: #3a82f7;
+      border: none;
+      color: white;
+      padding: 10px 14px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 18px;
+      line-height: 1;
+      width: 42px;
+      height: 42px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-weight: bold;
+    }
+    .send-btn:hover { background: #357ae8; }
+
+    .btn.secondary {
+      background: #2b2b31;
+      color: #ddd;
+      padding: 10px 18px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .btn:disabled { opacity: .6; cursor: not-allowed; }
+    .hint { font-size: 12px; color: #9aa0a6; text-align: center; }
+    .preview img { max-width: 100%; border-radius: 8px; margin-top: 8px; }
+
+    .output-area {
+      background: #1b1b1d;
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .out {
+      white-space: pre-wrap;
+      background: #0f0f13;
+      border: 1px solid #2a2a2e;
+      border-radius: 10px;
+      padding: 12px;
+      min-height: 100px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <h1>AI-Assistant <span class="pill">Text + Image → Text (stub)</span></h1>
+
+    <!-- 输入区：将来分别喂给 backend_text_input.py / backend_image_input.py -->
+    <div class="input-area">
+      <div class="row">
+        <div class="col">
+          <label>Text input（文字输入）</label>
+          <textarea id="textInput" placeholder="Type text here… / 在此输入文字"></textarea>
+        </div>
+        <div class="col">
+          <label>Image input（图片上传）</label>
+          <div class="preview" id="dropZone">
+            <input id="imageFile" type="file" accept="image/*" />
+            <div class="hint">Click to upload / 点击上传图片</div>
+            <div id="imgHolder" style="margin-top:8px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-group">
+        <!-- 用箭头统一发送（原 sendOutput 功能），保留清空按钮 -->
+        <button class="send-btn" id="sendOutput">➤</button>
+        <button class="btn secondary" id="clearBtn">Clear 清空</button>
+      </div>
+    </div>
+
+    <!-- 展示区：将来展示 backend_output.py 的返回 -->
+    <div class="output-area">
+      <label>Output（统一输出展示）</label>
+      <div id="resp" class="out">No output yet. / 暂无输出。</div>
+    </div>
+  </div>
+
+  <script>
+    // ========= 配置：现在用 mock，将来接后端时改这里 =========
+    const USE_MOCK = true;                  
+    const BASE_URL = "";                    
+    // 接口约定：
+    // 1) POST /api/text_input           body: JSON { text }
+    // 2) POST /api/image_input          body: multipart/form-data  field: image
+    // 3) POST /api/output               body: multipart/form-data  fields: text, image
+
+    // ========= DOM =========
+    const textEl = document.getElementById('textInput');
+    const fileEl = document.getElementById('imageFile');
+    const imgHolder = document.getElementById('imgHolder');
+    const respEl = document.getElementById('resp');
+    const sendOutputBtn = document.getElementById('sendOutput');
+    const clearBtn = document.getElementById('clearBtn');
+
+    // 预览图片（简单上传）
+    fileEl.addEventListener('change', () => {
+      imgHolder.innerHTML = '';
+      const f = fileEl.files?.[0];
+      if (!f) return;
+      const url = URL.createObjectURL(f);
+      const img = new Image();
+      img.onload = () => URL.revokeObjectURL(url);
+      img.src = url;
+      imgHolder.appendChild(img);
+    });
+
+    function setLoading(loading) {
+      [sendOutputBtn].forEach(b => b.disabled = loading);
+      if (loading) respEl.textContent = 'Loading… 正在请求…';
+    }
+    function showJSON(obj) {
+      respEl.textContent = typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2);
+    }
+
+    // ===== /api/output 预留（现在 mock）=====
+    async function callOutput() {
+      const text = (textEl.value || '').trim();
+      const f = fileEl.files?.[0];
+
+      if (USE_MOCK) {
+        return showJSON({
+          endpoint:'/api/output',
+          request:{ text: text || '(empty)', image: f ? { name: f.name, size_kb:(f.size/1024).toFixed(1) } : null },
+          final_output:'[MOCK] 融合后的统一输出（占位）。'
+        });
+      }
+
+      const fd = new FormData();
+      if (text) fd.append('text', text);
+      if (f) fd.append('image', f);
+      setLoading(true);
+      try {
+        const res = await fetch(`${BASE_URL}/api/output`, { method:'POST', body: fd });
+        const data = await res.json();
+        showJSON(data);
+      } catch (err) {
+        showJSON('Request failed: ' + err);
+      } finally { setLoading(false); }
+    }
+
+    // 事件绑定
+    sendOutputBtn.addEventListener('click', callOutput);
+    clearBtn.addEventListener('click', () => {
+      textEl.value = ''; fileEl.value = ''; imgHolder.innerHTML = ''; respEl.textContent = 'Cleared. / 已清空。';
+    });
+  </script>
+</body>
+</html>
